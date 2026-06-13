@@ -695,6 +695,14 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// 将外部数据（IP/UA/Token 等）安全地转为行内事件（onclick 等）中的 JS 字符串字面量。
+// JSON.stringify 生成带引号且完整转义的 JS 字符串（含单引号、反斜杠、控制字符），
+// 再用 esc 转义 HTML 特殊字符，使其可安全放入双引号属性中（浏览器解析属性时会还原实体）。
+// 用法：onclick="fn(${jsArg(x)})"  —— 注意不要再手动加引号。
+function jsArg(v) {
+  return esc(JSON.stringify(String(v ?? '')));
+}
+
 function copyText(text) {
   navigator.clipboard.writeText(text)
     .then(() => toast('已复制'))
@@ -929,12 +937,12 @@ function renderLogRows(rows) {
     const isWhitelisted = !isBlacklisted && whitelistIpSet.has(l.ip);
     const isCloud = !isBlacklisted && !isWhitelisted && isCloudIp(l.ip);
     const ipBtn = isBlacklisted
-      ? `<button class="bl-badge-btn" onclick="quickWhitelist('${esc(l.ip)}')">黑名单</button>`
+      ? `<button class="bl-badge-btn" onclick="quickWhitelist(${jsArg(l.ip)})">黑名单</button>`
       : isWhitelisted
-        ? `<button class="wl-badge-btn" onclick="quickRemoveWhitelist('${esc(l.ip)}')">白名单</button>`
+        ? `<button class="wl-badge-btn" onclick="quickRemoveWhitelist(${jsArg(l.ip)})">白名单</button>`
         : isCloud
           ? `<span class="bl-badge-btn" style="cursor:default;background:rgba(234,179,8,.15);color:#eab308;border-color:rgba(234,179,8,.3)">黑名单</span>`
-          : `<button class="add-btn-sm" onclick="quickBlacklist('${esc(l.ip)}')">封</button><button class="add-btn-sm" style="background:rgba(34,197,94,.2);color:#22c55e;border-color:rgba(34,197,94,.4)" onclick="quickAddWhitelistFromLog('${esc(l.ip)}')">白</button>`;
+          : `<button class="add-btn-sm" onclick="quickBlacklist(${jsArg(l.ip)})">封</button><button class="add-btn-sm" style="background:rgba(34,197,94,.2);color:#22c55e;border-color:rgba(34,197,94,.4)" onclick="quickAddWhitelistFromLog(${jsArg(l.ip)})">白</button>`;
     const tokenHtml = l.token
       ? `<div style="display:inline-flex;align-items:center;gap:3px;font-family:monospace;font-size:11px;color:#818cf8"><span title="${esc(l.token)}">${esc(l.token)}</span><button class="copy-btn" data-val="${esc(l.token)}" onclick="copyText(this.dataset.val)">复制</button></div>`
       : '—';
@@ -1083,10 +1091,10 @@ function renderStats() {
     const ipBanned = blacklistIpSet.has(r.ip);
     const ipWhitelisted = !ipBanned && whitelistIpSet.has(r.ip);
     const ipBtn = ipBanned
-      ? `<button class="bl-badge-btn" onclick="quickUnblockIp('${esc(r.ip)}')">黑名单</button>`
+      ? `<button class="bl-badge-btn" onclick="quickUnblockIp(${jsArg(r.ip)})">黑名单</button>`
       : ipWhitelisted
-        ? `<button class="wl-badge-btn" onclick="quickRemoveWhitelist('${esc(r.ip)}')">白名单</button>`
-        : `<button class="add-btn-sm" onclick="quickBlacklist('${esc(r.ip)}')">封</button><button class="add-btn-sm" style="background:rgba(34,197,94,.2);color:#22c55e;border-color:rgba(34,197,94,.4)" onclick="quickWhitelistIp('${esc(r.ip)}')">白</button>`;
+        ? `<button class="wl-badge-btn" onclick="quickRemoveWhitelist(${jsArg(r.ip)})">白名单</button>`
+        : `<button class="add-btn-sm" onclick="quickBlacklist(${jsArg(r.ip)})">封</button><button class="add-btn-sm" style="background:rgba(34,197,94,.2);color:#22c55e;border-color:rgba(34,197,94,.4)" onclick="quickWhitelistIp(${jsArg(r.ip)})">白</button>`;
     return `
     <div class="top-row">
       <span class="top-rank">${ipsStart+i+1}</span>
@@ -1135,7 +1143,7 @@ function renderStats() {
       <tr>
         <td class="ua-cell" style="padding:3px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.ua)}">${esc(r.ua)||'（空UA）'}</td>
         <td style="color:#ef4444;font-weight:600;padding:3px 8px">${r.count}</td>
-        <td style="padding:3px 8px;white-space:nowrap"><button class="add-btn-sm" onclick="quickBanUA('${esc(r.ua)}')">封禁UA</button></td>
+        <td style="padding:3px 8px;white-space:nowrap"><button class="add-btn-sm" onclick="quickBanUA(${jsArg(r.ua)})">封禁UA</button></td>
       </tr>`).join('')}
     </tbody></table>` : '<div class="empty">今日暂无可疑UA</div>';
 
@@ -1152,7 +1160,7 @@ function renderStats() {
         <button class="copy-btn" data-val="${esc(r.token)}" onclick="copyText(this.dataset.val)">复制</button>
       </span>
       <span class="top-count" style="white-space:nowrap">${r.ip_count} 个不同IP</span>
-      <button class="add-btn-sm" style="margin-left:8px" onclick="quickBanToken('${esc(r.token)}')">拉黑</button>
+      <button class="add-btn-sm" style="margin-left:8px" onclick="quickBanToken(${jsArg(r.token)})">拉黑</button>
     </div>`).join('') : '<div class="empty">暂无可疑Token（阈值：3个以上不同IP）</div>';
 
   // 可疑 IP
@@ -1164,13 +1172,13 @@ function renderStats() {
   document.getElementById('susp-ips').innerHTML = suspIps.length ? suspIps.map(r => {
     const suspBanned = blacklistIpSet.has(r.ip);
     const suspBtn = suspBanned
-      ? `<button class="bl-badge-btn" onclick="quickUnblockIp('${esc(r.ip)}')">黑名单</button>`
-      : `<button class="add-btn-sm" onclick="quickBlacklist('${esc(r.ip)}')">封</button>`;
+      ? `<button class="bl-badge-btn" onclick="quickUnblockIp(${jsArg(r.ip)})">黑名单</button>`
+      : `<button class="add-btn-sm" onclick="quickBlacklist(${jsArg(r.ip)})">封</button>`;
     return `
     <div class="top-row">
       <span class="top-val">${esc(r.ip)}
         ${suspBtn}
-        <button class="add-btn-sm" style="background:rgba(34,197,94,.2);color:#22c55e;border-color:rgba(34,197,94,.4);margin-left:4px" onclick="quickWhitelistIp('${esc(r.ip)}')">白</button>
+        <button class="add-btn-sm" style="background:rgba(34,197,94,.2);color:#22c55e;border-color:rgba(34,197,94,.4);margin-left:4px" onclick="quickWhitelistIp(${jsArg(r.ip)})">白</button>
       </span>
       <span class="top-count" style="white-space:nowrap">${r.token_count} 个Token</span>
     </div>`;
@@ -1268,7 +1276,7 @@ function renderUaBlacklist() {
         <td class="ip-cell">${esc(e.ua)}</td>
         ${makeCommentCell('/api/ua_blacklist.php', 'ua', e.ua, e.comment||'')}
         <td style="color:#64748b;font-size:11px">${esc(e.added_at||'')}</td>
-        <td><button class="btn-danger" onclick="uaDel('${esc(e.ua)}')">移除</button></td>
+        <td><button class="btn-danger" onclick="uaDel(${jsArg(e.ua)})">移除</button></td>
       </tr>`).join('')}
     </tbody></table>`;
   attachCommentCells(uaListEl);
@@ -1288,7 +1296,7 @@ function renderUaWhitelist() {
         <td class="ip-cell">${esc(e.ua)}</td>
         ${makeCommentCell('/api/ua_whitelist.php', 'ua', e.ua, e.comment||'')}
         <td style="color:#64748b;font-size:11px">${esc(e.added_at||'')}</td>
-        <td><button class="btn-danger" onclick="uaWlDel('${esc(e.ua)}')">移除</button></td>
+        <td><button class="btn-danger" onclick="uaWlDel(${jsArg(e.ua)})">移除</button></td>
       </tr>`).join('')}
     </tbody></table>`;
   attachCommentCells(uaWlListEl);
@@ -1383,7 +1391,7 @@ async function loadWhitelist() {
         <td><input type="checkbox" class="wl-check" value="${esc(e.ip)}"></td>
         <td class="ip-cell">${esc(e.ip)}</td>
         ${makeCommentCell('/api/whitelist.php', 'ip', e.ip, e.comment||'')}
-        <td><button class="btn-danger" onclick="wlDel('${esc(e.ip)}')">删除</button></td>
+        <td><button class="btn-danger" onclick="wlDel(${jsArg(e.ip)})">删除</button></td>
       </tr>`).join('')}
     </tbody></table>`;
   attachCommentCells(document.getElementById('wl-list'));
@@ -1501,7 +1509,7 @@ async function loadBlacklist() {
         <td class="ip-cell">${esc(e.ip)}</td>
         ${makeCommentCell('/api/blacklist.php', 'ip', e.ip, e.comment||'')}
         <td style="color:#64748b;font-size:11px">${esc(e.added_at||'')}</td>
-        <td><button class="btn-danger" onclick="blDel('${esc(e.ip)}')">解封</button></td>
+        <td><button class="btn-danger" onclick="blDel(${jsArg(e.ip)})">解封</button></td>
       </tr>`).join('')}
     </tbody></table>`;
   } else {
@@ -1635,7 +1643,7 @@ async function loadTokenBlacklist() {
         <td>${pullsHtml}</td>
         ${makeCommentCell('/api/token_blacklist.php', 'token', tok, e.comment||'')}
         <td style="color:#64748b;font-size:11px;white-space:nowrap">${esc(e.added_at||'')}</td>
-        <td><button class="btn-danger" style="font-size:12px;padding:2px 8px" onclick="tbDel('${esc(tok)}')">移除</button></td>
+        <td><button class="btn-danger" style="font-size:12px;padding:2px 8px" onclick="tbDel(${jsArg(tok)})">移除</button></td>
       </tr>`;
     }).join('')}
     </tbody></table>`;

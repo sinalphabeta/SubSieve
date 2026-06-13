@@ -45,7 +45,7 @@ if ($method === 'POST') {
 
     // 单个添加
     $ip      = trim($body['ip'] ?? '');
-    $comment = trim($body['comment'] ?? '');
+    $comment = safe_comment($body['comment'] ?? '');
 
     if (!$ip || !preg_match('/^\d{1,3}(\.\d{1,3}){3}(\/\d+)?$/', $ip)) {
         json_err('IP 格式不合法（仅支持 IPv4）');
@@ -72,7 +72,7 @@ if ($method === 'POST') {
 if ($method === 'PATCH') {
     $body    = json_decode(file_get_contents('php://input'), true) ?? [];
     $ip      = trim($body['ip'] ?? '');
-    $comment = trim($body['comment'] ?? '');
+    $comment = safe_comment($body['comment'] ?? '');
 
     if (!$ip) json_err('缺少 ip 参数');
 
@@ -127,8 +127,13 @@ function write_blacklist(array $entries): bool {
 
     $lines = ["# 黑名单 - 由 admin 自动生成 | " . date('Y-m-d H:i:s')];
     foreach ($entries as $e) {
-        $cmt = $e['comment'] ? " # {$e['comment']} ({$e['added_at']})" : " # {$e['added_at']}";
-        $lines[] = "deny {$e['ip']};{$cmt}";
+        $ip = trim((string)($e['ip'] ?? ''));
+        // 防御性校验 IP/CIDR，避免被篡改的 JSON 通过 IP 字段注入 nginx 指令
+        if (!preg_match('/^\d{1,3}(\.\d{1,3}){3}(\/\d+)?$/', $ip)) continue;
+        $at      = safe_comment($e['added_at'] ?? '');
+        $cmtText = safe_comment($e['comment'] ?? '');
+        $cmt = $cmtText !== '' ? " # {$cmtText} ({$at})" : " # {$at}";
+        $lines[] = "deny {$ip};{$cmt}";
     }
     $r2 = file_put_contents(BLACKLIST_CONF, implode("\n", $lines) . "\n", LOCK_EX);
 

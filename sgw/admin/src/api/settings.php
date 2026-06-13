@@ -74,17 +74,19 @@ if ($method === 'POST') {
     // ── 上游（机场）配置 ────────────────────────────────────────
     $upstreamChanged = false;
     if (isset($body['upstream_url']) && $body['upstream_url'] !== '') {
-        $url = trim($body['upstream_url']);
+        // 上游地址会直接拼入 proxy_pass，拒绝换行 / { } ; 等可篡改反代的字符
+        $url = safe_conf_value($body['upstream_url']);
         // 自动加 https:// 前缀
         if (!preg_match('#^https?://#', $url)) $url = 'https://' . $url;
         $s['upstream_url'] = $url;
-        // 自动提取 host
+        // 自动提取 host（用于 proxy_set_header Host）
         $host = parse_url($url, PHP_URL_HOST);
-        $s['upstream_host'] = $host ?: $url;
+        $s['upstream_host'] = safe_conf_value($host ?: $url);
         $upstreamChanged = true;
     }
     if (isset($body['subscribe_path']) && $body['subscribe_path'] !== '') {
-        $path = trim($body['subscribe_path']);
+        // 订阅路径会直接拼入 location ^~ ，同样拒绝结构字符
+        $path = safe_conf_value($body['subscribe_path']);
         if (!str_starts_with($path, '/')) $path = '/' . $path;
         $s['subscribe_path'] = $path;
         $upstreamChanged = true;
@@ -100,8 +102,12 @@ if ($method === 'POST') {
 
     // 若上游配置变更，重新生成 protect.conf
     if ($upstreamChanged && !empty($s['upstream_url']) && !empty($s['subscribe_path'])) {
-        $host = $s['upstream_host'] ?? parse_url($s['upstream_url'], PHP_URL_HOST);
-        $protectUpdated = write_protect_conf($s['subscribe_path'], $s['upstream_url'], $host);
+        // 写入 nginx 配置前对三个结构性值统一兜底校验，
+        // 覆盖可能来自旧 settings.json（本次未改动）的未校验值
+        $safePath    = safe_conf_value($s['subscribe_path']);
+        $safeBackend = safe_conf_value($s['upstream_url']);
+        $safeHost    = safe_conf_value($s['upstream_host'] ?? (parse_url($s['upstream_url'], PHP_URL_HOST) ?: $s['upstream_url']));
+        $protectUpdated = write_protect_conf($safePath, $safeBackend, $safeHost);
         if ($protectUpdated) {
             $nginxReloaded = nginx_reload();
         }

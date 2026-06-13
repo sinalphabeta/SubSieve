@@ -162,3 +162,9 @@ docker compose up -d --build
 # 进入 gateway 容器调试
 docker exec -it subscribe-gateway sh
 ```
+
+---
+
+## 更新日志
+
+- 2026-06-13：修复存储型 XSS 与 Nginx 配置注入两处高危漏洞，加固后台输入过滤与转义。

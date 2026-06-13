@@ -36,7 +36,7 @@ if ($method === 'POST') {
 
     // 单个添加
     $ip      = trim($body['ip'] ?? '');
-    $comment = trim($body['comment'] ?? '');
+    $comment = safe_comment($body['comment'] ?? '');
 
     if (!$ip || !preg_match('/^[\d\.\/\:a-fA-F]+$/', $ip)) {
         json_err('IP 格式不合法');
@@ -58,7 +58,7 @@ if ($method === 'POST') {
 if ($method === 'PATCH') {
     $body    = json_decode(file_get_contents('php://input'), true) ?? [];
     $ip      = trim($body['ip'] ?? '');
-    $comment = trim($body['comment'] ?? '');
+    $comment = safe_comment($body['comment'] ?? '');
 
     if (!$ip) json_err('缺少 ip 参数');
     if (!file_exists(WHITELIST_IPS)) json_err('白名单文件不存在');

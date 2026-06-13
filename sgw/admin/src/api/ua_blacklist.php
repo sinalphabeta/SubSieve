@@ -12,9 +12,10 @@ if ($method === 'GET') {
 if ($method === 'POST') {
     $body    = json_decode(file_get_contents('php://input'), true) ?? [];
     $ua      = trim($body['ua'] ?? '');
-    $comment = trim($body['comment'] ?? '');
+    $comment = safe_comment($body['comment'] ?? '');
 
     if (!$ua) json_err('请输入 UA 关键词');
+    if (preg_match('/[\r\n]/', $ua)) json_err('UA 关键词不能包含换行');
 
     $entries = read_ua_blacklist();
     foreach ($entries as $e) {
@@ -36,7 +37,7 @@ if ($method === 'POST') {
 if ($method === 'PATCH') {
     $body    = json_decode(file_get_contents('php://input'), true) ?? [];
     $ua      = trim($body['ua'] ?? '');
-    $comment = trim($body['comment'] ?? '');
+    $comment = safe_comment($body['comment'] ?? '');
 
     if (!$ua) json_err('缺少 ua 参数');
 
@@ -94,9 +95,12 @@ function write_ua_blacklist(array $entries): bool {
     $lines[] = '    default 0;';
     foreach ($entries as $e) {
         if (in_array($e['ua'], $whitelist, true)) continue; // 白名单中的UA不生效
-        // 转义正则特殊字符（nginx 使用 PCRE）
-        $pattern = str_replace(['\\', '"', '~'], ['\\\\', '\\"', '\\~'], $e['ua']);
-        $cmt     = $e['comment'] ? " # {$e['comment']}" : '';
+        // 防御性剔除换行（历史/被篡改的 JSON 可能含换行，避免注入新配置行）
+        $ua = str_replace(["\r", "\n"], '', (string)($e['ua'] ?? ''));
+        if ($ua === '') continue;
+        // 字面量匹配：preg_quote 中和正则元字符，再转义 nginx 双引号字符串层
+        $pattern = nginx_ua_pattern($ua);
+        $cmt     = !empty($e['comment']) ? ' # ' . safe_comment($e['comment']) : '';
         $lines[] = "    \"~*{$pattern}\" 1;{$cmt}";
     }
     $lines[] = '}';
