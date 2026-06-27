@@ -715,7 +715,7 @@ function normalizeLookupIp(ip) {
 function ipToolsHtml(ip) {
   const lookupIp = normalizeLookupIp(ip);
   const ipInfoUrl = 'https://ipinfo.io/' + encodeURIComponent(lookupIp);
-  const ping0Url = 'https://ping0.cc/ip/' + encodeURIComponent(lookupIp);
+  const ping0Url = 'https://ping0.cc/ip/' + encodeURI(lookupIp);
   return `<span title="${esc(ip)}">${esc(shortIp(ip))}</span><button class="copy-btn" data-val="${esc(ip)}" onclick="copyText(this.dataset.val)">复制</button><a class="copy-btn" href="${esc(ipInfoUrl)}" target="_blank" rel="noopener noreferrer">ipinfo</a><a class="copy-btn" href="${esc(ping0Url)}" target="_blank" rel="noopener noreferrer">ping0</a>`;
 }
 
