@@ -15,9 +15,6 @@ sgw/
 ├── docker-compose.yml
 ├── .env                     ← 由 setup.sh 自动生成，含账号密码等敏感信息
 ├── DEPLOY_INFO.txt          ← 部署完成后生成，记录访问地址和账号
-├── ssl/
-│   ├── cert.pem             ← 由 setup.sh 自动申请，或手动放入
-│   └── key.pem
 ├── gateway/                 ← nginx 拦截层 + proxy_pass
 │   ├── Dockerfile
 │   ├── nginx/
@@ -55,13 +52,13 @@ sgw/
 
 - 一台有公网 IP 的 VPS（Debian/Ubuntu 最低1c0.5g）
 - 已安装 Docker + Docker Compose
-- 如需自动申请 SSL 证书：提前把域名解析到本机（A 记录），且 **80 端口未被占用**
+- 如需公网 HTTPS、域名或隧道访问：在 Docker 外部自行配置 nginx、cloudflared 或其他反代
 - 不要装其他任何玩意儿
 
 ### 一键部署
 
 ```bash
-git clone https://github.com/Null404-0/SubSieve.git
+git clone https://github.com/sinalphabeta/SubSieve.git
 cd SubSieve/sgw
 chmod +x setup.sh
 ./setup.sh
@@ -75,7 +72,8 @@ chmod +x setup.sh
 | 订阅路径 | 默认 `/api/v1/client/subscribe`，直接回车即可 |
 | 订阅端口 | 机场后端监听端口，默认 `443` |
 | 网关端口 | 客户端订阅链接对外暴露的端口，默认 `443` |
-| 域名（SSL） | 输入已解析到本机的域名，脚本自动调用 acme.sh 申请证书；留空则手动放证书 |
+
+容器内部使用 HTTP，不再要求绑定域名、申请证书或放置 `cert.pem` / `key.pem`。服务只绑定宿主机 `127.0.0.1` 的网关端口和 `64444` 管理端口；公网 HTTPS、域名、反代或隧道由你在 Docker 外部自行处理。
 
 部署完成后，访问信息会打印在终端，同时保存到 `DEPLOY_INFO.txt`。
 ## 食用方法
@@ -109,8 +107,10 @@ cd SubSieve/sgw
 ## 访问后台
 
 ```
-https://你的域名或IP:64444/<随机路径>
+http://127.0.0.1:64444/<随机路径>
 ```
+
+如果前面接了 nginx、cloudflared 或其他外层代理，则使用你在外层代理中配置的地址访问。
 
 路径和账号密码见 `DEPLOY_INFO.txt`，或查看 `.env` 中的 `ADMIN_SECRET_PATH` / `ADMIN_PASS`。
 

@@ -543,13 +543,12 @@ tr:hover td{background:rgba(99,102,241,.04)}
           </div>
         </div>
 
-        <!-- SSL 证书信息 -->
+        <!-- 外层代理信息 -->
         <div class="card">
-          <div class="card-title">SSL 证书</div>
+          <div class="card-title">外层代理</div>
           <div id="cert-info"><div class="loading">加载中…</div></div>
           <div class="apply-hint" style="margin-top:12px;color:var(--text3)">
-            证书文件位置：<code style="font-size:11px;background:var(--bg);padding:2px 5px;border-radius:3px">/etc/nginx/ssl/cert.pem</code><br>
-            如需更换证书，请替换宿主机 <code style="font-size:11px;background:var(--bg);padding:2px 5px;border-radius:3px">sgw/ssl/</code> 目录下的文件后重启容器
+            容器内部使用 HTTP，无需证书文件。公网 HTTPS、域名或隧道访问请在 Docker 外部自行配置。
           </div>
         </div>
 
@@ -1722,24 +1721,10 @@ async function loadSettings() {
   if (currentSettings.gateway_port) {
     document.getElementById('cfg-gateway-port').value = currentSettings.gateway_port;
   }
-  // 显示证书信息
+  // 显示外层代理信息
   const cert = data.cert || {};
   const certEl = document.getElementById('cert-info');
-  if (!cert.exists) {
-    certEl.innerHTML = '<div class="empty" style="color:#ef4444">⚠️ 未找到证书文件</div>';
-  } else if (cert.subject) {
-    const color = cert.days_left > 30 ? '#22c55e' : cert.days_left > 7 ? '#eab308' : '#ef4444';
-    certEl.innerHTML = `
-      <table style="font-size:12px;width:100%">
-        <tr><td style="color:var(--text3);padding:4px 0;white-space:nowrap">域名</td><td style="color:var(--text);padding:4px 0 4px 10px">${esc(cert.subject)}</td></tr>
-        <tr><td style="color:var(--text3);padding:4px 0;white-space:nowrap">颁发机构</td><td style="color:var(--text2);padding:4px 0 4px 10px">${esc(cert.issuer)}</td></tr>
-        <tr><td style="color:var(--text3);padding:4px 0;white-space:nowrap">有效期</td><td style="padding:4px 0 4px 10px">${esc(cert.valid_from)} ~ ${esc(cert.valid_to)}</td></tr>
-        <tr><td style="color:var(--text3);padding:4px 0;white-space:nowrap">剩余天数</td><td style="color:${color};font-weight:600;padding:4px 0 4px 10px">${cert.days_left} 天</td></tr>
-        ${cert.san ? `<tr><td style="color:var(--text3);padding:4px 0;white-space:nowrap">SAN</td><td style="color:var(--text3);font-size:11px;padding:4px 0 4px 10px;word-break:break-all">${esc(cert.san)}</td></tr>` : ''}
-      </table>`;
-  } else {
-    certEl.innerHTML = '<div class="empty" style="color:#eab308">证书存在但无法解析（可能是非标准格式）</div>';
-  }
+  certEl.innerHTML = `<div class="empty" style="color:#22c55e">${esc(cert.message || '内部 HTTP 模式，无需 SSL 证书')}</div>`;
 }
 
 

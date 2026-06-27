@@ -216,33 +216,14 @@ function parse_protect_conf(): ?array {
 }
 
 /**
- * 获取 SSL 证书信息
+ * 获取内部服务 TLS 模式信息
  */
 function get_cert_info(): array {
-    $certFile = '/etc/nginx/ssl/cert.pem';
-    if (!file_exists($certFile)) {
-        return ['exists' => false];
-    }
-    $info = ['exists' => true, 'path' => $certFile];
-    $certContent = @file_get_contents($certFile);
-    if ($certContent === false) {
-        return $info; // 无读取权限，返回 exists:true 但无 subject
-    }
-    $certData = @openssl_x509_parse($certContent);
-    if ($certData) {
-        $info['subject']   = $certData['subject']['CN'] ?? '';
-        $info['valid_to']  = date('Y-m-d', $certData['validTo_time_t']);
-        $info['valid_from']= date('Y-m-d', $certData['validFrom_time_t']);
-        $info['issuer']    = $certData['issuer']['O'] ?? $certData['issuer']['CN'] ?? '';
-        $san = '';
-        if (!empty($certData['extensions']['subjectAltName'])) {
-            $san = $certData['extensions']['subjectAltName'];
-        }
-        $info['san'] = $san;
-        $daysLeft = (int)(($certData['validTo_time_t'] - time()) / 86400);
-        $info['days_left'] = $daysLeft;
-    }
-    return $info;
+    return [
+        'exists'  => false,
+        'mode'    => 'plain_http_origin',
+        'message' => '内部 HTTP 模式，无需 SSL 证书；公网 HTTPS、域名或隧道访问请在 Docker 外部自行配置。',
+    ];
 }
 
 /**
