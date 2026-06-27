@@ -2,14 +2,14 @@ location ^~ ${SUBSCRIBE_PATH} {
 
     if ($whitelist_ip = 1) { set $block_reason ""; }
 
-    if ($is_cloud_ip = 1)       { set $block_reason "cloud"; }
+${IDC_BLOCK_RULES}
     if ($bad_subscribe_ua = 1)  { set $block_reason "ua"; }
     if ($is_custom_bad_ua = 1)  { set $block_reason "ua"; }
     if ($is_ua_whitelisted = 1) { set $block_reason ""; }
 
     if ($whitelist_ip = 1) { set $block_reason ""; }
 
-    if ($block_reason = "cloud") { return 403 "Forbidden: Cloud IP"; }
+${IDC_BLOCK_RETURNS}
     if ($block_reason = "ua")    { return 403 "Forbidden: Invalid Client"; }
 
     limit_req zone=subscribe_limit burst=5 nodelay;

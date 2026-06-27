@@ -1,12 +1,10 @@
-version: '3.8'
-
 services:
   gateway:
     build: ./gateway
     container_name: subscribe-gateway
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${GATEWAY_PORT:-443}:443"
+      - "127.0.0.1:54444:54444"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -27,7 +25,6 @@ services:
       - ADMIN_USER=${ADMIN_USER:-admin}
       - ADMIN_PASS=${ADMIN_PASS}
       - ADMIN_SECRET_PATH=${ADMIN_SECRET_PATH}
-      - GATEWAY_PORT=${GATEWAY_PORT:-443}
     volumes:
       - gw_config:/etc/nginx/subscribe
       - gw_logs:/var/log/subscribe

@@ -16,10 +16,6 @@ if ($method === 'GET') {
                 $s['subscribe_path'] = $s['subscribe_path'] ?? $parsed['subscribe_path'];
             }
         }
-        // 网关端口：优先取 settings.json 中保存的值，否则取容器环境变量（即 .env 当前值）
-        if (empty($s['gateway_port'])) {
-            $s['gateway_port'] = GATEWAY_PORT;
-        }
         json_out(['ok' => true, 'settings' => $s, 'cert' => $certInfo]);
     } catch (Throwable $e) {
         json_err('PHP错误: ' . $e->getMessage());
@@ -58,17 +54,6 @@ if ($method === 'POST') {
             json_err('密码至少需要6位');
         }
         $s['admin_pass'] = $newPass;
-    }
-
-    // ── 网关端口 ───────────────────────────────────────────────
-    $gatewayPortChanged = false;
-    if (isset($body['gateway_port'])) {
-        $gp = (int)$body['gateway_port'];
-        if ($gp < 1 || $gp > 65535) {
-            json_err('网关端口无效（1-65535）');
-        }
-        $s['gateway_port'] = $gp;
-        $gatewayPortChanged = true;
     }
 
     // ── 上游（机场）配置 ────────────────────────────────────────
@@ -117,14 +102,10 @@ if ($method === 'POST') {
     update_deploy_info($s);
 
     $msg = '设置已保存' . ($nginxReloaded ? '，nginx 已重载' : '');
-    if ($gatewayPortChanged) {
-        $msg .= '。网关端口已记录，需在宿主机执行 bash update.sh 后生效';
-    }
     json_out([
         'ok'                   => true,
         'nginx_reloaded'       => $nginxReloaded,
         'protect_updated'      => $protectUpdated,
-        'gateway_port_changed' => $gatewayPortChanged,
         'msg'                  => $msg,
     ]);
     } catch (Throwable $e) {
@@ -151,20 +132,30 @@ function write_settings(array $s): bool {
 /**
  * 重新生成 protect.conf（覆盖上游配置）
  */
-function write_protect_conf(string $subscribePath, string $backend, string $host): bool {
+function write_protect_conf(string $subscribePath, string $backend, string $host, ?bool $idcBlockEnabled = null): bool {
+    if ($idcBlockEnabled === null) {
+        $settings = read_settings();
+        $idcBlockEnabled = ($settings['idc_block_enabled'] ?? true) !== false;
+    }
+    $idcBlockRules = $idcBlockEnabled
+        ? '    if ($is_cloud_ip = 1)       { set $block_reason "cloud"; }'
+        : '    # 内置 IDC 封禁已关闭';
+    $idcBlockReturns = $idcBlockEnabled
+        ? '    if ($block_reason = "cloud") { return 403 "Forbidden: Cloud IP"; }'
+        : '    # 内置 IDC 封禁已关闭';
     $conf = <<<NGINX
 location ^~ $subscribePath {
 
     if (\$whitelist_ip = 1) { set \$block_reason ""; }
 
-    if (\$is_cloud_ip = 1)       { set \$block_reason "cloud"; }
+$idcBlockRules
     if (\$bad_subscribe_ua = 1)  { set \$block_reason "ua"; }
     if (\$is_custom_bad_ua = 1)  { set \$block_reason "ua"; }
     if (\$is_ua_whitelisted = 1) { set \$block_reason ""; }
 
     if (\$whitelist_ip = 1) { set \$block_reason ""; }
 
-    if (\$block_reason = "cloud") { return 403 "Forbidden: Cloud IP"; }
+$idcBlockReturns
     if (\$block_reason = "ua")    { return 403 "Forbidden: Invalid Client"; }
 
     limit_req zone=subscribe_limit burst=5 nodelay;

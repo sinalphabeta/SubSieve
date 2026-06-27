@@ -528,21 +528,6 @@ tr:hover td{background:rgba(99,102,241,.04)}
           </div>
         </div>
 
-        <!-- 网关端口配置 -->
-        <div class="card">
-          <div class="card-title">订阅网关</div>
-          <div style="display:flex;flex-direction:column;gap:12px">
-            <div>
-              <label style="display:block;color:var(--text2);font-size:12px;margin-bottom:5px">网关监听端口（客户端订阅用的端口）</label>
-              <input class="ip-input" id="cfg-gateway-port" type="number" min="1" max="65535"
-                value="<?= _val((string)($_preSg['gateway_port'] ?? GATEWAY_PORT)) ?>"
-                style="width:100%;box-sizing:border-box">
-            </div>
-            <div class="apply-hint" style="color:#eab308">⚠️ 修改后需在宿主机执行 <code style="background:rgba(0,0,0,.3);padding:1px 5px;border-radius:3px">bash update.sh</code> 重启容器方可生效</div>
-            <button class="btn-primary" onclick="saveGatewayPort()">保存网关端口</button>
-          </div>
-        </div>
-
         <!-- 外层代理信息 -->
         <div class="card">
           <div class="card-title">外层代理</div>
@@ -572,6 +557,7 @@ let logPage = 1;         // 当前页（分页模式）
 let blacklistIpSet = new Set();
 let whitelistIpSet = new Set();
 let cloudCidrs = [];     // 云服务商CIDR列表，用于检测云IP
+let idcBlockEnabled = true;
 let allStatsData = null; // 完整统计数据缓存
 let statsLimits = {ips: 10, tokens: 10, uas: 10, suspTokens: 10, suspIps: 10};
 let statsPages  = {ips:  1, tokens:  1, uas:  1, suspTokens:  1, suspIps:  1};
@@ -778,6 +764,7 @@ async function loadLogs() {
   ]);
   blacklistIpSet = new Set((blData.entries || []).map(e => e.ip));
   whitelistIpSet = new Set((wlData.entries || []).map(e => e.ip));
+  idcBlockEnabled = blData.idc_block_enabled !== false;
   cloudCidrs = cloudData.cidrs || [];
   wlCommentMap = {}; (wlData.entries || []).forEach(e => wlCommentMap[e.ip] = e.comment || '');
   blCommentMap = {}; (blData.entries || []).forEach(e => blCommentMap[e.ip] = e.comment || '');
@@ -935,7 +922,7 @@ function renderLogRows(rows) {
   tbody.innerHTML = rows.map(l => {
     const isBlacklisted = blacklistIpSet.has(l.ip);
     const isWhitelisted = !isBlacklisted && whitelistIpSet.has(l.ip);
-    const isCloud = !isBlacklisted && !isWhitelisted && isCloudIp(l.ip);
+    const isCloud = idcBlockEnabled && !isBlacklisted && !isWhitelisted && isCloudIp(l.ip);
     const ipBtn = isBlacklisted
       ? `<button class="bl-badge-btn" onclick="quickWhitelist(${jsArg(l.ip)})">黑名单</button>`
       : isWhitelisted
@@ -1492,10 +1479,20 @@ async function loadBlacklist() {
     toast('加载失败: ' + (data.error||''), 'err'); return;
   }
   allBlEntries = data.entries || [];
+  idcBlockEnabled = data.idc_block_enabled !== false;
   const entries = allBlEntries;
   const idcSummary = data.idc_summary || [];
 
-  let html = '';
+  let html = `
+    <div class="batch-row" style="justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div>
+        <div style="color:var(--text);font-size:13px;font-weight:600">内置 IDC 封禁</div>
+        <div style="color:var(--text3);font-size:11px;margin-top:3px">关闭后仅保留手动 IP 黑名单，不再按系统内置云厂商 CIDR 自动拦截</div>
+      </div>
+      <button class="mode-btn ${idcBlockEnabled ? 'active' : ''}" onclick="toggleIdcBlock(${idcBlockEnabled ? 'false' : 'true'})">
+        ${idcBlockEnabled ? '已开启' : '已关闭'}
+      </button>
+    </div>`;
   if (entries.length) {
     html += `
     <div class="batch-row">
@@ -1518,7 +1515,7 @@ async function loadBlacklist() {
 
   if (idcSummary.length) {
     html += `<div class="idc-section">
-      <div class="card-title">系统内置IDC封禁（自动拦截，共 ${idcSummary.reduce((s,r)=>s+r.count,0)} 条CIDR）</div>
+      <div class="card-title">系统内置IDC封禁（${idcBlockEnabled ? '自动拦截' : '当前关闭'}，共 ${idcSummary.reduce((s,r)=>s+r.count,0)} 条CIDR）</div>
       <table><thead><tr><th>云服务商 / IDC</th><th>CIDR数量</th></tr></thead>
       <tbody>${idcSummary.map(s => `
         <tr>
@@ -1531,6 +1528,21 @@ async function loadBlacklist() {
 
   document.getElementById('bl-list').innerHTML = html;
   attachCommentCells(document.getElementById('bl-list'));
+}
+
+async function toggleIdcBlock(enabled) {
+  const d = await apiFetch('/api/blacklist.php', {
+    method:'POST', body:JSON.stringify({idc_block_enabled: enabled}),
+    headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest'},
+  });
+  if (d.ok) {
+    idcBlockEnabled = d.idc_block_enabled !== false;
+    toast('✅ 内置 IDC 封禁已' + (idcBlockEnabled ? '开启' : '关闭'));
+    loadBlacklist();
+    renderLogs();
+  } else {
+    toast(d.error || '切换失败', 'err');
+  }
 }
 
 function toggleAllBl(cb) {
@@ -1718,10 +1730,6 @@ async function loadSettings() {
   document.getElementById('cfg-upstream-url').value    = _displayUrl;
   document.getElementById('cfg-upstream-port').value   = _displayPort;
   document.getElementById('cfg-subscribe-path').value  = currentSettings.subscribe_path || '';
-  // 填充网关端口
-  if (currentSettings.gateway_port) {
-    document.getElementById('cfg-gateway-port').value = currentSettings.gateway_port;
-  }
   // 显示外层代理信息
   const cert = data.cert || {};
   const certEl = document.getElementById('cert-info');
@@ -1758,22 +1766,6 @@ async function saveCredSettings() {
     document.getElementById('cfg-new-pass').value = '';
     document.getElementById('cfg-confirm-pass').value = '';
     if (newPass) setTimeout(() => location.reload(), 2000);
-  } else {
-    toast(d.error || '保存失败', 'err');
-  }
-}
-
-async function saveGatewayPort() {
-  const portStr = document.getElementById('cfg-gateway-port').value.trim();
-  const port = parseInt(portStr, 10);
-  if (isNaN(port) || port < 1 || port > 65535) { toast('端口号无效（1-65535）', 'err'); return; }
-  const d = await apiFetch('/api/settings.php', {
-    method: 'POST', body: JSON.stringify({gateway_port: port}),
-    headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
-  });
-  if (d.ok) {
-    toast('✅ ' + (d.msg || '网关端口已保存'));
-    loadSettings();
   } else {
     toast(d.error || '保存失败', 'err');
   }

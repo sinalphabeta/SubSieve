@@ -6,13 +6,31 @@ mkdir -p /var/log/subscribe /etc/nginx/subscribe
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [entrypoint] $*" | tee -a "$LOG"; }
 
+build_protect_conf() {
+    local idc_enabled="true"
+    if [[ -f /etc/nginx/subscribe/admin_settings.json ]] \
+        && grep -q '"idc_block_enabled"[[:space:]]*:[[:space:]]*false' /etc/nginx/subscribe/admin_settings.json; then
+        idc_enabled="false"
+    fi
+
+    if [[ "$idc_enabled" == "true" ]]; then
+        export IDC_BLOCK_RULES='    if ($is_cloud_ip = 1)       { set $block_reason "cloud"; }'
+        export IDC_BLOCK_RETURNS='    if ($block_reason = "cloud") { return 403 "Forbidden: Cloud IP"; }'
+    else
+        export IDC_BLOCK_RULES='    # 内置 IDC 封禁已关闭'
+        export IDC_BLOCK_RETURNS='    # 内置 IDC 封禁已关闭'
+    fi
+
+    envsubst '${V2B_BACKEND} ${V2B_HOST} ${SUBSCRIBE_PATH} ${IDC_BLOCK_RULES} ${IDC_BLOCK_RETURNS}' \
+        < /etc/nginx/templates-src/subscribe_protect.conf.template \
+        > /etc/nginx/subscribe/protect.conf
+}
+
 [[ -z "${V2B_BACKEND:-}" ]] && { echo "❌ V2B_BACKEND 未设置"; exit 1; }
 [[ -z "${V2B_HOST:-}" ]]    && { echo "❌ V2B_HOST 未设置"; exit 1; }
 
 log "生成 protect.conf ..."
-envsubst '${V2B_BACKEND} ${V2B_HOST} ${SUBSCRIBE_PATH}' \
-    < /etc/nginx/templates-src/subscribe_protect.conf.template \
-    > /etc/nginx/subscribe/protect.conf
+build_protect_conf
 
 cp /etc/nginx/templates-src/nginx.conf /etc/nginx/nginx.conf
 

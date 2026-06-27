@@ -18,7 +18,7 @@ echo -e "${BOLD}SubSieve — 部署向导${RESET}"
 echo "────────────────────────────────────────"
 
 # ── 加载上次保存的输入 ─────────────────────────────────────────
-_S_V2B_HOST=""; _S_SUBSCRIBE_PATH=""; _S_GATEWAY_PORT=""
+_S_V2B_HOST=""; _S_SUBSCRIBE_PATH=""
 if [[ -f "$STATE_FILE" ]]; then
     # shellcheck source=/dev/null
     source "$STATE_FILE" 2>/dev/null || true
@@ -81,13 +81,10 @@ V2B_HOST="$(echo "$V2B_BACKEND" | sed -E 's#^https?://##; s#/.*$##; s#:.*$##')"
 
 ask "订阅路径（默认 /api/v1/client/subscribe）" "${_S_SUBSCRIBE_PATH:-/api/v1/client/subscribe}" SUBSCRIBE_PATH
 
-ask "用来接收客户订阅请求的端口（默认 443）" "${_S_GATEWAY_PORT:-443}" GATEWAY_PORT
-
 # ── 持久化本次输入（下次重跑时作为默认值）────────────────────
 cat > "$STATE_FILE" <<EOF
 _S_V2B_HOST="${V2B_BACKEND}"
 _S_SUBSCRIBE_PATH="${SUBSCRIBE_PATH}"
-_S_GATEWAY_PORT="${GATEWAY_PORT}"
 EOF
 
 echo ""
@@ -123,7 +120,6 @@ cat > .env <<EOF
 V2B_BACKEND=${V2B_BACKEND}
 V2B_HOST=${V2B_HOST}
 SUBSCRIBE_PATH=${SUBSCRIBE_PATH}
-GATEWAY_PORT=${GATEWAY_PORT}
 
 ADMIN_USER=${ADMIN_USER}
 ADMIN_PASS=${ADMIN_PASS}
@@ -164,7 +160,7 @@ print_summary() {
     echo -e "  密码：  ${YELLOW}${ADMIN_PASS}${RESET}"
     echo ""
     echo -e "  ${BOLD}订阅网关${RESET}"
-    echo -e "  内部地址：${CYAN}http://${DISPLAY_HOST}:${GATEWAY_PORT}${RESET}"
+    echo -e "  内部地址：${CYAN}http://${DISPLAY_HOST}:54444${RESET}"
     echo -e "  订阅路径：${CYAN}${SUBSCRIBE_PATH}${RESET}"
     echo -e "  代理到：  ${CYAN}${V2B_BACKEND}${RESET}"
     echo ""
@@ -190,8 +186,8 @@ SubSieve 部署信息
   密码:   ${ADMIN_PASS}
 
 订阅网关
-  端口:     ${GATEWAY_PORT}
-    内部地址: http://${DISPLAY_HOST}:${GATEWAY_PORT}
+    端口:     54444
+        内部地址: http://${DISPLAY_HOST}:54444
   订阅路径: ${SUBSCRIBE_PATH}
   代理到:   ${V2B_BACKEND}
 
