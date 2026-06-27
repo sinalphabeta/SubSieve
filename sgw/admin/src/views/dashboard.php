@@ -253,11 +253,11 @@ tr:hover td{background:rgba(99,102,241,.04)}
           <input type="file" id="log-import-file" accept=".log,.txt" style="display:none" onchange="importLogs(this)">
         </div>
         <!-- 过滤器 -->
-        <div class="log-controls">
-          <input class="log-filter" id="filter-ip" placeholder="过滤 IP" oninput="logPage=1;renderLogs()">
-          <input class="log-filter" id="filter-status" placeholder="状态码 如 403" oninput="logPage=1;renderLogs()">
-          <input class="log-filter" id="filter-token" placeholder="过滤 Token（自动去重）" oninput="logPage=1;renderLogs()">
-          <input class="log-filter" id="filter-ua" placeholder="过滤 UA（不分大小写）" oninput="logPage=1;renderLogs()">
+        <div class="log-controls" autocomplete="off">
+          <input class="log-filter" id="filter-ip" name="subsieve-filter-ip" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="search" placeholder="过滤 IP" oninput="logPage=1;renderLogs()">
+          <input class="log-filter" id="filter-status" name="subsieve-filter-status" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="numeric" placeholder="状态码 如 403" oninput="logPage=1;renderLogs()">
+          <input class="log-filter" id="filter-token" name="subsieve-filter-token" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="search" placeholder="过滤 Token（自动去重）" oninput="logPage=1;renderLogs()">
+          <input class="log-filter" id="filter-ua" name="subsieve-ua-search-<?= bin2hex(random_bytes(4)) ?>" autocomplete="new-password" autocapitalize="off" spellcheck="false" inputmode="search" placeholder="过滤 UA（不分大小写）" oninput="logPage=1;renderLogs()">
           <span class="auto-timer" id="log-count">—</span>
           <div class="radio-group">
             <label><input type="radio" name="sub-filter" value="subscribe" checked onchange="logPage=1;renderLogs()"> 仅订阅相关</label>
