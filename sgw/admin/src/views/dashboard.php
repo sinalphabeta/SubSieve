@@ -564,6 +564,7 @@ tr:hover td{background:rgba(99,102,241,.04)}
 <script>
 // ── 状态 ─────────────────────────────────────────────────────
 const BASE = <?= json_encode(ADMIN_SECRET_PATH !== '' ? '/' . ADMIN_SECRET_PATH : '') ?>;
+const SUBSCRIBE_PATH = <?= json_encode($_preSg['subscribe_path'] ?? '/api/v1/client/subscribe') ?>;
 let allLogs = [];
 let logMode = 'today';   // 'today' | 'all'
 let logLimit = 100;      // 0=瀑布流（无限制）
@@ -796,7 +797,7 @@ function renderLogs() {
   const subOnly = document.querySelector('input[name="sub-filter"][value="subscribe"]').checked;
 
   let rows = allLogs.filter(l => {
-    if (subOnly && !l.request.includes('/api/v1/client/subscribe')) return false;
+    if (subOnly && !l.request.includes(SUBSCRIBE_PATH)) return false;
     if (fIp     && !l.ip.toLowerCase().includes(fIp)) return false;
     if (fStatus && String(l.status) !== fStatus) return false;
     if (fToken  && !l.token.toLowerCase().includes(fToken)) return false;
