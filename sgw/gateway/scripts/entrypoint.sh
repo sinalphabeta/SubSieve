@@ -6,6 +6,25 @@ mkdir -p /var/log/subscribe /etc/nginx/subscribe
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [entrypoint] $*" | tee -a "$LOG"; }
 
+build_trusted_proxy_conf() {
+    local output="/etc/nginx/subscribe/trusted_proxy.conf"
+    : > "$output"
+
+    local raw="${TRUSTED_PROXY_IPS:-}"
+    [[ -z "$raw" ]] && return 0
+
+    raw="${raw//,/ }"
+    local item
+    for item in $raw; do
+        if [[ "$item" =~ ^[0-9A-Fa-f:.]+(/[0-9]{1,3})?$ ]]; then
+            echo "set_real_ip_from $item;" >> "$output"
+        else
+            log "[警告] 跳过非法 TRUSTED_PROXY_IPS 项: $item"
+        fi
+    done
+    chmod 666 "$output"
+}
+
 build_protect_conf() {
     local idc_enabled="true"
     if [[ -f /etc/nginx/subscribe/admin_settings.json ]] \
@@ -32,6 +51,7 @@ build_protect_conf() {
 
 log "生成 protect.conf ..."
 build_protect_conf
+build_trusted_proxy_conf
 
 cp /etc/nginx/templates-src/nginx.conf /etc/nginx/nginx.conf
 
