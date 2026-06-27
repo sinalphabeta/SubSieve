@@ -70,9 +70,14 @@ fi
 # ── 收集机场信息 ───────────────────────────────────────────────
 echo ""
 echo -e "${CYAN}请填写机场信息${RESET}"
-ask "机场地址（如 panel.yourdomain.com，不含 https://）" "$_S_V2B_HOST" V2B_HOST
-V2B_HOST="${V2B_HOST#https://}"
-V2B_BACKEND="https://${V2B_HOST}"
+ask "机场地址（如 panel.yourdomain.com 或 http://host.docker.internal:10086）" "$_S_V2B_HOST" V2B_INPUT
+V2B_INPUT="${V2B_INPUT%/}"
+if [[ "$V2B_INPUT" =~ ^https?:// ]]; then
+    V2B_BACKEND="$V2B_INPUT"
+else
+    V2B_BACKEND="https://${V2B_INPUT}"
+fi
+V2B_HOST="$(echo "$V2B_BACKEND" | sed -E 's#^https?://##; s#/.*$##; s#:.*$##')"
 
 ask "订阅路径（默认 /api/v1/client/subscribe）" "${_S_SUBSCRIBE_PATH:-/api/v1/client/subscribe}" SUBSCRIBE_PATH
 
@@ -80,7 +85,7 @@ ask "用来接收客户订阅请求的端口（默认 443）" "${_S_GATEWAY_PORT
 
 # ── 持久化本次输入（下次重跑时作为默认值）────────────────────
 cat > "$STATE_FILE" <<EOF
-_S_V2B_HOST="${V2B_HOST}"
+_S_V2B_HOST="${V2B_BACKEND}"
 _S_SUBSCRIBE_PATH="${SUBSCRIBE_PATH}"
 _S_GATEWAY_PORT="${GATEWAY_PORT}"
 EOF

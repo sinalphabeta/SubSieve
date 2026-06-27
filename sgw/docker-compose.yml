@@ -7,6 +7,8 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:${GATEWAY_PORT:-443}:443"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - V2B_BACKEND=${V2B_BACKEND}
       - V2B_HOST=${V2B_HOST}

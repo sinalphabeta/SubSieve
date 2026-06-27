@@ -68,12 +68,14 @@ chmod +x setup.sh
 
 | 提示 | 说明 |
 |------|------|
-| 机场地址 | 你的机场面板域名，如 `panel.example.com`，不含 `https://` |
+| 机场地址 | 你的机场面板地址，如 `panel.example.com`、`https://panel.example.com` 或 `http://host.docker.internal:10086` |
 | 订阅路径 | 默认 `/api/v1/client/subscribe`，直接回车即可 |
 | 订阅端口 | 机场后端监听端口，默认 `443` |
 | 网关端口 | 客户端订阅链接对外暴露的端口，默认 `443` |
 
 容器内部使用 HTTP，不再要求绑定域名、申请证书或放置 `cert.pem` / `key.pem`。服务只绑定宿主机 `127.0.0.1` 的网关端口和 `64444` 管理端口；公网 HTTPS、域名、反代或隧道由你在 Docker 外部自行处理。
+
+如果机场后端就在同一台宿主机上，并监听了 `0.0.0.0:10086`，机场地址可填写 `http://host.docker.internal:10086`。
 
 部署完成后，访问信息会打印在终端，同时保存到 `DEPLOY_INFO.txt`。
 ## 食用方法
