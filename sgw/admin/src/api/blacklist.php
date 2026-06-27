@@ -231,7 +231,12 @@ $idcBlockReturns
     add_header X-Subscribe-Filter "active";
 }
 NGINX;
-    return file_put_contents(PROTECT_CONF, $conf, LOCK_EX) !== false;
+    $written = file_put_contents(PROTECT_CONF, $conf, LOCK_EX);
+    if ($written === false && file_exists(PROTECT_CONF)) {
+        @chmod(PROTECT_CONF, 0666);
+        $written = file_put_contents(PROTECT_CONF, $conf, LOCK_EX);
+    }
+    return $written !== false;
 }
 
 function bl_parse_protect_conf(): array {

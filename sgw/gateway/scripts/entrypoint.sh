@@ -24,6 +24,7 @@ build_protect_conf() {
     envsubst '${V2B_BACKEND} ${V2B_HOST} ${SUBSCRIBE_PATH} ${IDC_BLOCK_RULES} ${IDC_BLOCK_RETURNS}' \
         < /etc/nginx/templates-src/subscribe_protect.conf.template \
         > /etc/nginx/subscribe/protect.conf
+    chmod 666 /etc/nginx/subscribe/protect.conf
 }
 
 [[ -z "${V2B_BACKEND:-}" ]] && { echo "❌ V2B_BACKEND 未设置"; exit 1; }

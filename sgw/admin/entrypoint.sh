@@ -15,6 +15,10 @@ chmod 777 "$SUBSCRIBE_DIR"
 [ -f "$SUBSCRIBE_DIR/whitelist_ips.txt" ] || touch "$SUBSCRIBE_DIR/whitelist_ips.txt"
 [ -f "$SUBSCRIBE_DIR/admin_settings.json" ] || echo "{}" > "$SUBSCRIBE_DIR/admin_settings.json"
 
+if [ -f "$SUBSCRIBE_DIR/protect.conf" ]; then
+    chmod 666 "$SUBSCRIBE_DIR/protect.conf"
+fi
+
 chmod 666 \
     "$SUBSCRIBE_DIR/blacklist.json" \
     "$SUBSCRIBE_DIR/blacklist.conf" \
