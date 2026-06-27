@@ -3,6 +3,8 @@
 // config.php — 从环境变量加载配置
 // =============================================================
 
+date_default_timezone_set(getenv('TZ') ?: 'Asia/Shanghai');
+
 // 文件路径（共享 volume）— 先定义，以便读取 settings.json
 define('LOG_FILE',          '/var/log/subscribe/access.log');
 define('WHITELIST_IPS',     '/etc/nginx/subscribe/whitelist_ips.txt');
