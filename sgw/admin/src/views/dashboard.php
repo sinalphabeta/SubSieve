@@ -695,6 +695,18 @@ function copyText(text) {
     .catch(() => toast('复制失败，请手动复制','err'));
 }
 
+function shortIp(ip) {
+  const s = String(ip || '');
+  if (!s.includes(':') || s.length <= 24) return s;
+  return s.slice(0, 18) + '…';
+}
+
+function ipToolsHtml(ip) {
+  const ipInfoUrl = 'https://ipinfo.io/' + encodeURIComponent(ip);
+  const ping0Url = 'https://ping0.cc/ip/' + encodeURIComponent(ip);
+  return `<span title="${esc(ip)}">${esc(shortIp(ip))}</span><button class="copy-btn" data-val="${esc(ip)}" onclick="copyText(this.dataset.val)">复制</button><a class="copy-btn" href="${esc(ipInfoUrl)}" target="_blank" rel="noopener noreferrer">ipinfo</a><a class="copy-btn" href="${esc(ping0Url)}" target="_blank" rel="noopener noreferrer">ping0</a>`;
+}
+
 // ── 日志模式切换 ───────────────────────────────────────────────
 function setLogMode(mode) {
   logMode = mode;
@@ -942,7 +954,7 @@ function renderLogRows(rows) {
     return `
     <tr>
       <td style="white-space:nowrap;color:#64748b;font-size:11px">${esc(l.time)}</td>
-      <td class="ip-cell"><div style="display:inline-flex;align-items:center;gap:4px;flex-wrap:nowrap"><span>${esc(l.ip)}</span><button class="copy-btn" data-val="${esc(l.ip)}" onclick="copyText(this.dataset.val)">复制</button><span style="display:inline-block;width:2px"></span>${ipBtn}</div></td>
+      <td class="ip-cell"><div style="display:inline-flex;align-items:center;gap:4px;flex-wrap:nowrap">${ipToolsHtml(l.ip)}<span style="display:inline-block;width:2px"></span>${ipBtn}</div></td>
       ${commentCell}
       <td>${statusBadge(l.status)}</td>
       <td style="min-width:100px;max-width:200px">${tokenHtml}</td>
@@ -1085,8 +1097,8 @@ function renderStats() {
     return `
     <div class="top-row">
       <span class="top-rank">${ipsStart+i+1}</span>
-      <span class="top-val">
-        ${esc(r.ip)}
+      <span class="top-val" style="display:flex;align-items:center;gap:4px;min-width:0;flex-wrap:wrap">
+        ${ipToolsHtml(r.ip)}
         ${ipBtn}
       </span>
       <span class="top-count">${r.total}次</span>
@@ -1163,7 +1175,7 @@ function renderStats() {
       : `<button class="add-btn-sm" onclick="quickBlacklist(${jsArg(r.ip)})">封</button>`;
     return `
     <div class="top-row">
-      <span class="top-val">${esc(r.ip)}
+      <span class="top-val" style="display:flex;align-items:center;gap:4px;min-width:0;flex-wrap:wrap">${ipToolsHtml(r.ip)}
         ${suspBtn}
         <button class="add-btn-sm" style="background:rgba(34,197,94,.2);color:#22c55e;border-color:rgba(34,197,94,.4);margin-left:4px" onclick="quickWhitelistIp(${jsArg(r.ip)})">白</button>
       </span>
