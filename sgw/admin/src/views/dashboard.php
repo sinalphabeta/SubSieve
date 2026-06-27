@@ -52,6 +52,7 @@ function _val(string $v): string { return htmlspecialchars($v, ENT_QUOTES); }
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.ico" type="image/x-icon">
 <title><?= htmlspecialchars(PAGE_TITLE, ENT_QUOTES) ?></title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
